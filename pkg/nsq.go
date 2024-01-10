@@ -1,8 +1,9 @@
 package pkg
 
 import (
-	"github.com/education-hub/BE/config"
-	"github.com/education-hub/BE/errorr"
+	"mydream_project/config"
+	"mydream_project/errorr"
+
 	"github.com/nsqio/go-nsq"
 )
 

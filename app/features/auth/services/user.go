@@ -1,23 +1,23 @@
-package service 
-
+package services
 
 import (
 	"context"
 	"encoding/base32"
 	"fmt"
 	"mime/multipart"
+	entity "mydream_project/app/entities"
+	"mydream_project/app/features/auth/repository"
+	dependcy "mydream_project/config/dependency"
+	"mydream_project/errorr"
+	"mydream_project/helper"
+	
 
-	entity "github.com/education-hub/BE/app/entities"
-	"github.com/education-hub/BE/app/features/user/repository"
-	dependcy "github.com/education-hub/BE/config/dependency"
-	"github.com/education-hub/BE/errorr"
-	"github.com/education-hub/BE/helper"
 	"github.com/go-playground/validator"
 )
 
 type (
 	user struct {
-		repo repository.UserRepo 
+		repo       repository.UserRepo
 		validator *validator.Validate 
 		dep      dependcy.Depend
 	} 
@@ -66,12 +66,12 @@ func (u *user) Register(ctx context.Context, req entity.RegisterReq) error {
 		u.dep.Log.Errorf("[ERROR] WHEN VALIDATE Regis REQ, Error: %v", err)
 		return errorr.NewBad("Request body not valid")
 	} 
-	_, err := u.repo.FindByUsername(u.dep.Db.WithContext(ctx), req.Email)
+	_, err := u.repo.FindByUsername(u.dep.Db.WithContext(ctx), req.Username)
 	if err == nil {
 			u.dep.PromErr["error"] = "Email already registered"
 			return errorr.NewBad("Username already registered")
 	}
-	user, err := u.repo.FindByEmail(u.dep.Db.WithContext(ctx), req.Email) 
+	user, err := u.repo.FindByEmail(u.dep.Db.WithContext(ctx), req.Username) 
 	if err == nil {
 		if user.IsVerified == true {
 			u.dep.PromErr["error"] = "Email already registered"
@@ -84,14 +84,10 @@ func (u *user) Register(ctx context.Context, req entity.RegisterReq) error {
 		u.dep.Log.Errorf("Erorr service: %v", err) 
 		return errorr.NewBad("Register failed")
 	}
-	hashedEmailString := base32.StdEncoding.EncodeToString([]byte(req.Email))
+	hashedEmailString := base32.StdEncoding.EncodeToString([]byte(req.Username))
 	data := entity.User{
 		Username: 					req.Username,
-		Email: 						req.Email,
-		Address: 					req.Address,
 		Password: 					passhash,
-		FirstName:                  req.FirstName,
-		SureName:                   req.LastName,
 		IsVerified:                 false,
 		VerificationCode:           hashedEmailString,	
 	}
@@ -128,8 +124,8 @@ func (u *user) ForgetPass(ctx context.Context, email string) error {
 		u.dep.PromErr["error"] = "Email Not Verified" 
 		return errorr.NewBad("Email not verified")
 	}
-	hashedEmailString := base32.StdEncoding.EncodeToString([]byte(user.Email))
-	if err := u.repo.InsertForgotPassToken(u.dep.Db.WithContext(ctx), entity.ForgotPass{Token: hashedEmailString, Email: user.Email}); err != nil {
+	hashedEmailString := base32.StdEncoding.EncodeToString([]byte(user.Username))
+	if err := u.repo.InsertForgotPassToken(u.dep.Db.WithContext(ctx), entity.ForgotPass{Token: hashedEmailString, Email: user.Username}); err != nil {
 		u.dep.PromErr["error"] = err.Error()
 		return err
 	}
@@ -168,7 +164,7 @@ func (u *user) Update(ctx context.Context, req entity.UpdateReq, file multipart.
 		if err != nil {
 			u.dep.PromErr["error"] =  err.Error()
 			u.dep.Log.Errorf("[ERROR] WHEN HASHING PASSWORD, Error: %v", err)
-			 return nil, errorr.NewBad("Registerfailed")
+			return nil, errorr.NewBad("Registerfailed")
 		}
 		req.Password = passhash
 	}
@@ -179,15 +175,15 @@ func (u *user) Update(ctx context.Context, req entity.UpdateReq, file multipart.
 			return nil, errorr.NewBad("Username already registered")
 		}
 	}
-	if req.Email != "" {
-		user, err := u.repo.FindByUsername(u.dep.Db.WithContext(ctx), req.Email) 
+	if req.Username != "" {
+		user, err := u.repo.FindByUsername(u.dep.Db.WithContext(ctx), req.Username) 
 		if err == nil {
 			if user.IsVerified == true {
 				u.dep.PromErr["error"] = "Email already registered" 
 				return nil, errorr.NewBad("Email already registered")
 			}
 		}
-		hashedEmailString := base32.StdEncoding.EncodeToString([]byte(req.Email))
+		hashedEmailString := base32.StdEncoding.EncodeToString([]byte(req.Username))
 		go func() {
 			err := u.dep.Nsq.Publish("7", []byte(hashedEmailString))
 			if err != nil {
@@ -200,22 +196,17 @@ func (u *user) Update(ctx context.Context, req entity.UpdateReq, file multipart.
 		data.IsVerified = true 
 	}
 	if file != nil {
-		filename := fmt.Sprintf("%s_%s", "User", req.Image)
+		filename := fmt.Sprintf("%s_%s", "User", req.Username)
 		if err1 := u.dep.Gcp.UploadFile(file, filename); err1 != nil {
 			u.dep.PromErr["error"] = err1.Error()
 			u.dep.Log.Errorf("Error Service : %v", err1)
 			return nil, errorr.NewBad("Failed to upload image")
 		}
-		req.Image = filename 
+		req.Username = filename 
 		file.Close()
 	}
 	data.Username  = req.Username 
-	data.Email     = req.Email
-	data.Address   = req.Address
-	data.Password  = req.Password
-	data.Image     = req.Image 
-	data.FirstName = req.FirstName 
-	data.SureName  = req.SureName 
+	data.Password  = req.Password 
 	data.ID = uint(req.Id) 
 	res, err := u.repo.Update(u.dep.Db.WithContext(ctx), data)
 	if err != nil {

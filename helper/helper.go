@@ -1,17 +1,17 @@
-package helper 
+package helper
 
 import (
 	"fmt"
 	"log"
 	"math/rand"
+	"mydream_project/config/dependency"
+	"mydream_project/errorr"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	depedency "github.com/education-hub/BE/config/dependency"
-	"github.com/education-hub/BE/errorr"
 	"github.com/golang-jwt/jwt"
 	"github.com/mojocn/base64Captcha"
 	"github.com/sirupsen/logrus"
@@ -46,7 +46,7 @@ func VerifyPassword(passhash string, password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(passhash), []byte(password))
 }
 
-func GenerateJWT(id int, role string, is_verified string, dp depedency.Depend) string {
+func GenerateJWT(id int, role string, is_verified string, dp dependency.Depend) string {
 	var informasi = jwt.MapClaims{}
 	informasi["id"] = id
 	informasi["role"] = role

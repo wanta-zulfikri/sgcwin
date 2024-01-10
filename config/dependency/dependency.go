@@ -1,9 +1,9 @@
 package dependency
 
 import (
-	"mydream_project/app/config"
+	"mydream_project/config"
+	"mydream_project/pkg"
 
-	"github.com/education-hub/BE/pkg"
 	"github.com/go-redis/redis/v8"
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
@@ -14,13 +14,13 @@ import (
 type Depend struct {
 	dig.In
 	Db      	*gorm.DB 
-	Config  	*config.Config 
+	Config      *config.Config
 	Echo    	*echo.Echo 
 	Log     	*logrus.Logger 
+	Gcp         *pkg.StorageGCP
     Rds     	*redis.Client 
 	Mds     	*pkg.Midtrans
 	Nsq     	*pkg.NSQProducer
 	Validation  *pkg.Validation
-	Pusher      *pkg.Pusher
 	PromErr map[string]string 
 }

@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"mydream_project/app/entities"
+	"mydream_project/errorr"
 	"net/http"
 
-	"github.com/education-hub/BE/app/entities"
-	"github.com/education-hub/BE/errorr"
 	"github.com/midtrans/midtrans-go"
 	"github.com/midtrans/midtrans-go/coreapi"
 )
@@ -74,7 +74,7 @@ func (m *Midtrans) Refund(req *coreapi.RefundReq, invoice string) error {
 	}
 	return nil
 }
-func (m *Midtrans) CreateCharge(req entities.ReqCharge) (*ChargeResponse, error) {
+func (m *Midtrans) CreateCharge(entities) (*ChargeResponse, error) {
 	newreq := &coreapi.ChargeReq{
 		TransactionDetails: midtrans.TransactionDetails{
 			OrderID:  req.Invoice,

@@ -4,24 +4,18 @@ import (
 	"context"
 	"encoding/csv"
 	"io"
-	"net/http"
+	"mydream_project/config"
+	"mydream_project/pkg"
+	feat "mydream_project/app/features"
 	"os"
 
 	"cloud.google.com/go/storage"
-	feat "github.com/education-hub/BE/app/features"
-	"github.com/education-hub/BE/config"
-	"github.com/education-hub/BE/pkg"
 	"github.com/labstack/echo/v4"
 	"github.com/midtrans/midtrans-go"
 	"github.com/midtrans/midtrans-go/coreapi"
 	"github.com/nsqio/go-nsq"
-	"github.com/pusher/pusher-http-go"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/dig"
-	"golang.org/x/net/http2"
-	"golang.org/x/oauth2/google"
-	"google.golang.org/api/calendar/v3"
 )
 
 var (
@@ -48,16 +42,7 @@ func RunAll() {
 	if err := Container.Provide(NewStorage); err != nil {
 		panic(err)
 	}
-	if err := Container.Provide(NewQuiz); err != nil {
-		panic(err)
-	}
-	if err := Container.Provide(NewCalendar); err != nil {
-		panic(err)
-	}
 	if err := Container.Provide(NewMidtrans); err != nil {
-		panic(err)
-	}
-	if err := Container.Provide(NewPusher); err != nil {
 		panic(err)
 	}
 	if err := Container.Provide(NewNSQ); err != nil {
@@ -77,22 +62,10 @@ func RunAll() {
 	}
 	if err := feat.RegisterService(Container); err != nil {
 		panic(err)
-	}
+	} 
 
 }
 
-func NewPusher(conf *config.Config) (ps *pkg.Pusher) {
-	ps = &pkg.Pusher{}
-	ps.Env = conf.Pusher
-	ps.Client = &pusher.Client{
-		AppID:   ps.Env.AppId,
-		Key:     ps.Env.Key,
-		Secret:  ps.Env.Secret,
-		Cluster: ps.Env.Cluster,
-		Secure:  ps.Env.Secure,
-	}
-	return ps
-}
 func NewStorage(cfg *config.Config) (*pkg.StorageGCP, error) {
 	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", cfg.GCP.Credential)
 	client, err := storage.NewClient(context.Background())
@@ -100,7 +73,7 @@ func NewStorage(cfg *config.Config) (*pkg.StorageGCP, error) {
 		return nil, err
 	}
 	return &pkg.StorageGCP{
-		ClG:        client,
+		CIG:        client,
 		ProjectID:  cfg.GCP.PRJID,
 		BucketName: cfg.GCP.BCKNM,
 		Path:       cfg.GCP.Path,
@@ -121,34 +94,6 @@ func NewMidtrans(cfg *config.Config) *pkg.Midtrans {
 		ExpDuration: cfg.Midtrans.ExpiryDuration,
 		ExpUnit:     cfg.Midtrans.Unit,
 	}
-}
-func NewCalendar(log *logrus.Logger) (*pkg.Calendar, error) {
-	b, err := os.ReadFile("./AuthCal.json")
-	if err != nil {
-		return nil, err
-	}
-	config, err := google.ConfigFromJSON(b, calendar.CalendarScope)
-	if err != nil {
-		return nil, err
-	}
-	calendar := &pkg.Calendar{
-		Config: config,
-		Log:    log,
-	}
-	return calendar, nil
-}
-func NewQuiz(conf *config.Config) *pkg.Quiz {
-	t := &http2.Transport{}
-	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-		Transport: t}
-	quiz := &pkg.Quiz{
-		Client: client,
-		Auth:   conf.QuizAuth,
-	}
-	return quiz
 }
 func NewLog() (*log.Logger, error) {
 	var logger = log.New()

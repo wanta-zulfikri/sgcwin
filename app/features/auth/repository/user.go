@@ -1,10 +1,10 @@
 package repository
 
 import (
+	 entity"mydream_project/app/entities"
 	"mydream_project/errorr"
 	"reflect"
 
-	entity "github.com/education-hub/BE/app/entities"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
@@ -42,7 +42,7 @@ func (u *user) Create(db *gorm.DB, user entity.User) error {
 func (u *user) FindByEmail(db *gorm.DB, email string) (*entity.User,error) {
 	res := entity.User{}
 	err := db.Where("email = ?", email).Find(&res).Error 
-	if res.Email == "" {
+	if res.Username == "" {
 		return nil, errorr.NewBad("Email not registered")
 	} 
 	if err != nil {
@@ -113,7 +113,7 @@ func (u *user) Update(db *gorm.DB, user entity.User) (*entity.User, error) {
 func (u *user) GetById(db *gorm.DB, id int) (*entity.User, error) {
 	res := entity.User{}
 	err := db.Find(&res, id).Error
-	if res.Email == "" {
+	if res.Username == "" {
 		return nil, errorr.NewBad("Id not found")
 	}
 	if err != nil {
